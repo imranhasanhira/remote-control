@@ -1,0 +1,53 @@
+Data sent from Client to Server
+
+---------------------------------------------------------
+First 1Byte will be any of the following 
+	|	0 - MOUSE
+	|	Mouse Simulator. next 1Byte means the following operation to perform
+	|		|	0 - CURSOR_MOVE_BY
+	|		|		next two 2Byte represents the delX and delY (change of cursor position).
+	|		|	1 - CLICK
+	|		|		next 1Byte represents which Mouse Button is clicked
+	|		|	2 - DOWN
+	|		|		next 1Byte represents which Mouse Button is Pressed down
+	|		|	3 - UP
+	|		|		next 1Byte represents which Mouse Button is Released UP
+	|		|	4 - SCROLL_BY
+	|		|		next 1byte represents how much amount to scroll.
+	|		|		
+	|		|		
+	|		|		To be familiar with the MouseButtons see following - 
+	|		|		|	0 - LEFT_BUTTON
+	|		|		|	1 - RIGHT_BUTTON
+	|		|		|	2 - SCROLL_BUTTON
+	|
+	|-------------------------------------------
+	|	1 - SCREEN
+	|	Screen Simulator. next 1Byte means the following operations - 
+	|		|	0 - SCREEN_SHOT
+	|		|	1 - SCREEN_RESOLUTION (asking server for providing server screen resolution)
+	|
+	|---------------------------------------------
+	|	2 - KEYBOARD
+	|	Keyboard Simulator. Next 1Byte represents to following operations - 
+	|		|	0 - PRESS
+	|		|		next 1byte represents which key to be typed.
+	|		|	1 - DOWN
+	|		|		next 1byte represents which key to be pressed down.
+	|		|	2 - UP
+	|		|		next 1byte represents which key to be released up.
+	|
+	|------------------------------------------------
+	|	3 - AUTHENTICATION
+	|	Authenticator. Next 1Byte represents the following operations - 
+	|		|	0 - LOG_IN
+	|		|		next 10Byte represents password.
+	|		|	1 - LOG_OUT
+	|
+	|------------------------------------
+	|
+	|
+	|
+	|
+	
+	
