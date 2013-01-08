@@ -1,0 +1,32 @@
+Data sent from Client to Server
+
+---------------------------------------------------------
+First 1Byte will be any of the following 
+	|-------------------------------------------
+	|	0 - INTENTIONALY_LEFT_EMPTY
+	|
+	|------------------------------------------------
+	|	1 - SCREEN
+	|	Screen Simulator. next 1Byte means the following operations - 
+	|		|	0 - SCREEN_SHOT
+	|		|		the screenshot data format will be defined later
+	|		|	1 - SCREEN_RESOLUTION
+	|		|		the next two 2Byte should contain the server screen resolution (width X height)
+	|
+	|---------------------------------------------
+	|	2 - INTENTIONALY_LEFT_EMPTY
+	|
+	|------------------------------------------------
+	|	3 - AUTHENTICATION
+	|	Authenticator. Next 1Byte represents the following operations - 
+	|		|	0 - LOG_IN_RESULT
+	|		|		next 1Byte represents successfull login(1) or invalid login (0).
+	|		
+	|
+	|------------------------------------
+	|
+	|
+	|
+	|
+	
+	
