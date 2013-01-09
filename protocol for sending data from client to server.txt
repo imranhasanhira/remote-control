@@ -5,12 +5,12 @@ First 1Byte will be any of the following
 	|	0 - MOUSE
 	|	Mouse Simulator. next 1Byte means the following operation to perform
 	|		|	0 - CURSOR_MOVE_BY
-	|		|		next two 2Byte represents the delX and delY (change of cursor position).
+	|		|		next two 2Bytes represents the delX and delY (change of cursor position).
 	|		|	1 - CLICK
 	|		|		next 1Byte represents which Mouse Button is clicked
-	|		|	2 - DOWN
+	|		|	2 - PRESS
 	|		|		next 1Byte represents which Mouse Button is Pressed down
-	|		|	3 - UP
+	|		|	3 - RELEASE
 	|		|		next 1Byte represents which Mouse Button is Released UP
 	|		|	4 - SCROLL_BY
 	|		|		next 1byte represents how much amount to scroll.
@@ -30,12 +30,12 @@ First 1Byte will be any of the following
 	|---------------------------------------------
 	|	2 - KEYBOARD
 	|	Keyboard Simulator. Next 1Byte represents to following operations - 
-	|		|	0 - PRESS
-	|		|		next 1byte represents which key to be typed.
-	|		|	1 - DOWN
-	|		|		next 1byte represents which key to be pressed down.
-	|		|	2 - UP
-	|		|		next 1byte represents which key to be released up.
+	|		|	0 - TYPE
+	|		|		next 4byte represents which key to be typed.
+	|		|	1 - PRESS
+	|		|		next 4byte represents which key to be pressed down.
+	|		|	2 - RELEASE
+	|		|		next 4byte represents which key to be released up.
 	|
 	|------------------------------------------------
 	|	3 - AUTHENTICATION

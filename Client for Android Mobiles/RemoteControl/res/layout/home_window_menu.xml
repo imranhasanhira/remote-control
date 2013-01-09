@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/menu_home"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="Home"/>
+
+    <item
+        android:id="@+id/menu_touchpad"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="Touchpad"/>
+    
+    <item
+        android:id="@+id/menu_keyboard"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="Keyboard"/>
+    
+    <item
+        android:id="@+id/menu_exit"
+        android:icon="@android:drawable/btn_minus"
+        android:title="Exit"/>
+
+</menu>
