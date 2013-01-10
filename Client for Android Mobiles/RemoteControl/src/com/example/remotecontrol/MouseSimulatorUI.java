@@ -1,6 +1,11 @@
 package com.example.remotecontrol;
 
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import com.example.remotecontrol.simulators.MouseSimulator;
+import com.example.remotecontrol.simulators.MouseSimulator.Button;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -16,30 +21,47 @@ import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 
 public class MouseSimulatorUI extends View implements OnTouchListener {
-	private boolean leftKeyPressed;
-	private boolean rightKeyPressed;
 
-	private boolean touchDown;
+	private int lastPressedX;
+	private int lastPressedY;
 	private int lastX;
 	private int lastY;
+	private int curX;
+	private int curY;
 
 	private int w;
 	private int h;
 
+	private enum TouchMode {
+		NULL, CLICK, DRAG
+	};
+
+	private TouchMode touchMode;
 	private long lastTouchDownTimeInMS;
 
+	private boolean uiInitialized;
 	private Paint paint;
-	private boolean initialized;
-	private Rect leftButton;
-	private Rect rightButton;
-	private Rect touchPad;
+	private Rect leftButtonArea;
+	private Rect rightButtonArea;
+	private Rect touchpadArea;
+	private Rect verticalScrollArea;
+	private Rect horizontalScrollArea;
 	private MouseSimulator mouseSimulator;
+
+	private Timer timer;
+	private TimerTask timerTask;
 
 	public MouseSimulatorUI(Context context, MouseSimulator mouseSimulator) {
 		super(context);
 		this.mouseSimulator = mouseSimulator;
-		touchDown = false;
-		w = h = 0;
+
+		touchMode = TouchMode.NULL;
+		lastTouchDownTimeInMS = 0;
+		uiInitialized = false;
+		w = h = -1;
+
+		timer = new Timer("ClickEventSendingTimer");
+		Log.e("Initializing size", getWidth() + ", " + getHeight());
 
 		this.setOnTouchListener(this);
 		paint = new Paint();
@@ -49,14 +71,23 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
 
-		w = getWidth();
-		h = getHeight();
+		if (!uiInitialized) {
+			w = getWidth();
+			h = getHeight();
 
-		if (leftButton == null) {
-			int buttonHeight = 100;
-			leftButton = new Rect(5, h - buttonHeight, w / 2 - 5, h - 5);
-			rightButton = new Rect(w / 2 + 5, h - buttonHeight, w - 5, h - 5);
-			touchPad = new Rect(0, 0, w, h - buttonHeight - 5);
+			int buttonHeight = 60;
+			leftButtonArea = new Rect(5, h - buttonHeight, w / 2 - 5, h - 5);
+			rightButtonArea = new Rect(w / 2 + 5, h - buttonHeight, w - 5,
+					h - 5);
+			touchpadArea = new Rect(0, 0, w, h - buttonHeight - 5);
+			horizontalScrollArea = new Rect(touchpadArea.left,
+					touchpadArea.bottom - buttonHeight / 3, touchpadArea.right,
+					touchpadArea.bottom);
+			verticalScrollArea = new Rect(
+					touchpadArea.right - buttonHeight / 3, touchpadArea.top,
+					touchpadArea.right, horizontalScrollArea.top);
+
+			uiInitialized = true;
 		}
 
 		// Log.e("", w + ":" + h);
@@ -66,55 +97,91 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 
 		paint.setColor(Color.DKGRAY);
 		paint.setStyle(Paint.Style.FILL_AND_STROKE);
-		canvas.drawRect(leftButton, paint);
-		canvas.drawRect(rightButton, paint);
+		canvas.drawRect(leftButtonArea, paint);
+		canvas.drawRect(rightButtonArea, paint);
+
+		paint.setColor(Color.GRAY);
+//		canvas.drawRoundRect(new RectF(horizontalScrollArea), 10, 10, paint);
+		canvas.drawRoundRect(new RectF(verticalScrollArea), 10, 10, paint);
 
 	}
 
 	@Override
 	public boolean onTouch(View arg0, MotionEvent event) {
-		// Log.e("", "Touch event");
 
-		int curX = (int) event.getX();
-		int curY = (int) event.getY();
-
-		int diffX = curX - lastX;
-		int diffY = curY - lastY;
+		curX = (int) event.getX();
+		curY = (int) event.getY();
 
 		long curTime = System.currentTimeMillis();
 
 		switch (event.getAction()) {
 		case MotionEvent.ACTION_DOWN:
-			lastTouchDownTimeInMS = curTime;
-			touchDown = true;
+			if (touchMode == TouchMode.NULL) {
+				touchMode = TouchMode.CLICK;
+			} else if (touchMode == TouchMode.DRAG) {
+				if (curTime - lastTouchDownTimeInMS < Constants.TouchClickTimeInMS) {
+					cancelClickTimer();
+					sendLeftPress();
+					// pr("Timer cancel: pressing left");
+				}
+			}
 
+			lastTouchDownTimeInMS = curTime;
+			lastPressedX = curX;
+			lastPressedY = curY;
 			break;
 
 		case MotionEvent.ACTION_UP:
-			if (curTime - lastTouchDownTimeInMS < 80 && Math.abs(diffX) < 10
-					&& Math.abs(diffY) < 10) {
-				// clicked in less than a second
-				// Log.e("timediff", "" + (curTime - lastTouchDownTimeInMS));
+			boolean releasedOnWherePressed = isReleasedOnWhereLastPressed();
 
-				if (inside(curX, curY, leftButton)
-						|| inside(curX, curY, touchPad)) {
-
+			if (releasedOnWherePressed) {
+				if (isInside(lastPressedX, lastPressedY, leftButtonArea)) {
 					sendLeftClick();
-				} else if (inside(curX, curY, rightButton)) {
+				} else if (isInside(lastPressedX, lastPressedY, rightButtonArea)) {
 					sendRightClick();
 				}
 			}
-			touchDown = false;
+
+			if (isInside(lastPressedX, lastPressedY, touchpadArea)) {
+
+				if (touchMode == TouchMode.CLICK) {
+					if (releasedOnWherePressed) {
+						startClickTimer();
+						touchMode = TouchMode.DRAG;
+					} else {
+						touchMode = TouchMode.NULL;
+					}
+				} else if (touchMode == TouchMode.DRAG) {
+					touchMode = TouchMode.NULL;
+					sendLeftRelease();
+					// pr("releasing left");
+				} else {
+					touchMode = TouchMode.NULL;
+				}
+
+			}
 			break;
 
 		case MotionEvent.ACTION_MOVE:
-			if (touchDown) {
-				if (curX > .9 * w && lastX > .9 * w) {
-					mouseScrollBy(diffY);
-				} else if (curY > .95 * h && lastY > .95 * h) {
-					mouseScrollBy(diffX);
-				} else {
-					mouseMoveBy(2 * diffX, 2 * diffY);
+			int diffX = curX - lastX;
+			int diffY = curY - lastY;
+
+			if (isInside(curX, curY, touchpadArea)) {
+				if (touchMode == TouchMode.CLICK) {
+					if (isInside(lastPressedX, lastPressedY, verticalScrollArea)) {
+						mouseScrollVerticalBy(diffY);
+						// pr("ScrollY " + diffY + "");
+					} else if (isInside(lastPressedX, lastPressedY,
+							horizontalScrollArea)) {
+						mouseScrollHorizontalBy(diffX);
+						// pr("ScrollX " + diffX + "");
+					} else {
+						mouseMoveBy(diffX, diffY);
+						// pr("Moving " + diffX + "," + diffY);
+					}
+				} else if (touchMode == TouchMode.DRAG) {
+					mouseMoveBy(diffX, diffY);
+					// pr("Dragging " + diffX + "," + diffY);
 				}
 			}
 			break;
@@ -128,19 +195,76 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 		return true;
 	}
 
-	private void sendRightClick() {
-		// Log.e("", "Right click");
+	private void startClickTimer() {
+		timerTask = new TimerTask() {
+
+			@Override
+			public void run() {
+				sendLeftClick();
+				// pr("Inside Timer: Clicking left");
+				touchMode = TouchMode.NULL;
+			}
+		};
+		timer.schedule(timerTask, Constants.TouchClickTimeInMS);
+	}
+
+	public void cancelClickTimer() {
+		if (timerTask != null)
+			timerTask.cancel();
+	}
+
+	public void pr(String s) {
+		Log.e("" + touchMode, s);
+	}
+
+	public boolean isReleasedOnWhereLastPressed() {
+		return Math.abs(curX - lastPressedX) < 10
+				&& Math.abs(curY - lastPressedY) < 10;
+	}
+
+	public boolean isLastPressedOn(Rect rect) {
+		return isInside(lastPressedX, lastPressedY, rect);
+	}
+
+	public boolean isInside(int x, int y, Rect rect) {
+		if (x >= rect.left && x <= rect.right && y >= rect.top
+				&& y <= rect.bottom)
+			return true;
+		return false;
+	}
+
+	private void sendLeftPress() {
+		// Log.e("", "Left Press");
 		try {
-			mouseSimulator.simulateClick(MouseSimulator.Button.RIGHT);
+			mouseSimulator.simulatePress(Button.LEFT);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void sendLeftRelease() {
+		// Log.e("", "Left Release");
+		try {
+			mouseSimulator.simulateRelease(Button.LEFT);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 	private void sendLeftClick() {
 		// Log.e("", "Left click");
 		try {
 			mouseSimulator.simulateClick(MouseSimulator.Button.LEFT);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void sendRightClick() {
+		// Log.e("", "Right click");
+		try {
+			mouseSimulator.simulateClick(MouseSimulator.Button.RIGHT);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -155,20 +279,22 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 		}
 	}
 
-	private void mouseScrollBy(int ds) {
+	private void mouseScrollVerticalBy(int ds) {
 		// Log.e("", "move " + i + ":" + j);
 		try {
-			mouseSimulator.simulateScrollBy((short) ds);
+			mouseSimulator.simulateVerticalScrollBy((short) ds);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	public boolean inside(int x, int y, Rect rect) {
-		if (x >= rect.left && x <= rect.right && y >= rect.top
-				&& y <= rect.bottom)
-			return true;
-		return false;
+	private void mouseScrollHorizontalBy(int ds) {
+		// Log.e("", "move " + i + ":" + j);
+		try {
+			mouseSimulator.simulateHorizontalScrollBy((short) ds);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

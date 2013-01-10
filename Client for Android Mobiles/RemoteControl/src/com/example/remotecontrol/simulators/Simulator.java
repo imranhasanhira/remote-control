@@ -1,4 +1,4 @@
-package com.example.remotecontrol;
+package com.example.remotecontrol.simulators;
 
 import java.io.IOException;
 import java.io.OutputStream;

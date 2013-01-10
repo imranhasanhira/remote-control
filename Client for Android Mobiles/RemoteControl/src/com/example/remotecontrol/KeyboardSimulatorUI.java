@@ -2,32 +2,45 @@ package com.example.remotecontrol;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.Rect;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnTouchListener;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
-public class KeyboardSimulatorUI extends LinearLayout {
-	private int lastX;
-	private int lastY;
-	private long lastTouchedInMS;
-	private float imageScale;
+import com.example.remotecontrol.simulators.KeyboardSimulator;
+
+public class KeyboardSimulatorUI extends LinearLayout implements
+		OnTouchListener {
+	private int lastPressedX;
+	private int lastPressedY;
+	private int curX;
+	private int curY;
+	private Timer timer;
+	private TimerTask timerTask;
+	private boolean keyRepeating;
+	private int curKey;
+
+	private ImageView iv;
 
 	private KeyboardSimulator keyboardSimulator;
 
 	public KeyboardSimulatorUI(Context context,
-			final KeyboardSimulator keyboardSimulator) {
+			KeyboardSimulator keyboardSimulator) {
 		super(context);
 		this.keyboardSimulator = keyboardSimulator;
 
@@ -36,14 +49,20 @@ public class KeyboardSimulatorUI extends LinearLayout {
 				LinearLayout.LayoutParams.MATCH_PARENT));
 		this.setOrientation(LinearLayout.VERTICAL);
 
-		final ImageView iv = new ImageView(getContext()) {
+		Constants.scaleKeyboardMap();
+		iv = new ImageView(getContext()) {
 			@Override
 			public void draw(Canvas canvas) {
 				super.draw(canvas);
+				Log.e("","zoomlevel: "+Constants.keyboardZoomLevel);
+				Log.e("", "res: " + getWidth() + ", " + getHeight());
+
 				Paint p = new Paint();
 				p.setColor(Color.GREEN);
 				p.setStyle(Style.STROKE);
 				for (Integer i : Constants.keyboardMap.keySet()) {
+					Log.e("",
+							"" + ((char) i.intValue()) + ": " + Constants.keyboardMap.get(i));
 					canvas.drawRect(Constants.keyboardMap.get(i), p);
 				}
 
@@ -52,27 +71,18 @@ public class KeyboardSimulatorUI extends LinearLayout {
 						new Rect(1, 1, getWidth() - 1, getHeight() - 1), p);
 			}
 		};
-		iv.setLayoutParams(new LayoutParams(2*Constants.keyBoardWidthPx, 2*Constants.keyBoardHeightPx));
+		// iv.setLayoutParams(new LayoutParams(Constants.keyboardZoomLevel
+		// * Constants.keyBoardWidthPx, Constants.keyboardZoomLevel
+		// * Constants.keyBoardHeightPx));
+		iv.setLayoutParams(new LayoutParams(900, 288));
 		iv.setScaleType(ScaleType.FIT_XY);
 		iv.setImageResource(R.drawable.keyboard_long);
 
-		// final ImageView iv = (ImageView) hsv.findViewById(R.id.iv_keyboard);
-		// float aspectRatio = Constants.keyBoardWidthPx /
-		// Constants.keyBoardHeightPx;
-		// Canvas c = new Canvas();
-		// Paint p = new Paint();
-		// p.setColor(Color.GREEN);
-		// p.setStyle(Style.FILL_AND_STROKE);
-		// for (Integer i : Constants.keyboardMap.keySet()) {
-		// c.drawRect(Constants.keyboardMap.get(i), p);
-		// c.drawRect(new Rect(0, 0, 220, 500), p);
-		// }
-		// iv.draw(c);
+		adjustKeyboardRotation();
 
 		ScrollView sv = new ScrollView(getContext());
 		sv.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
 				LayoutParams.WRAP_CONTENT));
-		
 
 		HorizontalScrollView hsv = new HorizontalScrollView(getContext());
 		hsv.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
@@ -81,66 +91,123 @@ public class KeyboardSimulatorUI extends LinearLayout {
 		sv.addView(hsv);
 		this.addView(sv);
 
-		imageScale = Constants.keyBoardWidthPx
-				/ iv.getDrawable().getIntrinsicWidth();
-		Log.e("ImageView", iv.getDrawable().getIntrinsicWidth() + ","
-				+ iv.getDrawable().getIntrinsicHeight());
-		iv.setOnTouchListener(new OnTouchListener() {
+		iv.setOnTouchListener(this);
+	}
 
-			@Override
-			public boolean onTouch(View arg0, MotionEvent event) {
-				// Log.e("", event.getX() + "," + event.getY());
-				int curX = (int) event.getX();
-				int curY = (int) event.getY();
+	@Override
+	public boolean onTouch(View arg0, MotionEvent event) {
+		// Log.e("", event.getX() + "," + event.getY());
+		curX = (int) event.getX();
+		curY = (int) event.getY();
 
-				long curTime = System.currentTimeMillis();
-				switch (event.getAction()) {
-				case MotionEvent.ACTION_DOWN:
-					lastTouchedInMS = curTime;
-					break;
+		if (!Constants.horizontalKeyboard && curX != curY) {
+			curX ^= curY ^= curX ^= curY;
+		}
 
-				case MotionEvent.ACTION_UP:
-					if (curTime - lastTouchedInMS < 70
-							&& Math.abs(curY - lastY) < 10
-							&& Math.abs(curX - lastX) < 10) {
-						Log.e("", "KEY PRESSED");
+		long curTime = System.currentTimeMillis();
+		switch (event.getAction()) {
+		case MotionEvent.ACTION_DOWN:
+			if (Constants.repeatingKeyEnabled) {
+				startKeyPressTimer();
+			}
 
-						Set<Integer> keySet = Constants.keyboardMap.keySet();
-						for (Integer key : keySet) {
-							Rect rect = Constants.keyboardMap.get(key);
-							if (inside(curX, curY, rect)) {
-								try {
-									keyboardSimulator
-											.simulateKeyType(VirtualKey.VK_0);
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							}
+			lastPressedX = curX;
+			lastPressedY = curY;
+			break;
+
+		case MotionEvent.ACTION_UP:
+			if (isReleasedOnWhereLastPressed()) {
+				Log.e("", "KEY PRESSED");
+
+				Set<Integer> keySet = Constants.keyboardMap.keySet();
+				for (Integer key : keySet) {
+					Rect rect = Constants.keyboardMap.get(key);
+					if (inside(curX, curY, rect)) {
+						if (Constants.repeatingKeyEnabled) {
+							cancelKeypressTimer();
+						} else {
+							simulateKeyType(VirtualKey.VK_0);
 						}
 					}
+				}
+			}
 
-					break;
+			break;
 
-				case MotionEvent.ACTION_MOVE:
-					lastTouchedInMS = curTime;
-					break;
+		case MotionEvent.ACTION_MOVE:
+			break;
+		}
+
+		return true;
+	}
+
+	public boolean isReleasedOnWhereLastPressed() {
+		return Math.abs(curX - lastPressedX) < 10
+				&& Math.abs(curY - lastPressedY) < 10;
+	}
+
+	private void startKeyPressTimer() {
+		timerTask = new TimerTask() {
+
+			@Override
+			public void run() {
+				try {
+					while (keyRepeating) {
+						simulateKeyType(curKey);
+						Thread.sleep(Constants.keyboardPressDelay);
+					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
 
-				lastX = curX;
-				lastY = curY;
-
-				return true;
 			}
-		});
+		};
+		timer.schedule(timerTask, 0);
+	}
+
+	private void cancelKeypressTimer() {
+		keyRepeating = false;
+		if (timerTask != null)
+			timerTask.cancel();
+	}
+
+	private void adjustKeyboardRotation() {
+		Matrix matrix = new Matrix();
+		if (!Constants.horizontalKeyboard) {
+			matrix.postRotate(-90);
+		}
+		iv.setImageMatrix(matrix);
 	}
 
 	public boolean inside(float x, float y, Rect rect) {
-		x *= imageScale;
-		y *= imageScale;
 		if (x >= rect.left && x <= rect.right && y >= rect.top
 				&& y <= rect.bottom)
 			return true;
 		return false;
+	}
+
+	public void simulateKeyType(int virtualKey) {
+		try {
+			keyboardSimulator.simulateKeyType(virtualKey);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void simulateKeyPress(int virtualKey) {
+		try {
+			keyboardSimulator.simulateKeyPress(virtualKey);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void simulateKeyRelease(int virtualKey) {
+		try {
+			keyboardSimulator.simulateKeyRelease(virtualKey);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

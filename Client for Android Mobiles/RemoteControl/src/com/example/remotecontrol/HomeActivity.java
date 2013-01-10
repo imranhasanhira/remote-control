@@ -4,13 +4,20 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 
+import com.example.remotecontrol.simulators.KeyboardSimulator;
+import com.example.remotecontrol.simulators.MouseSimulator;
+
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences.Editor;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.format.Formatter;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -22,6 +29,13 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 public class HomeActivity extends Activity {
+	// private static final int REQUEST_CODE_SETTINGS_UI = 0;
+
+	private enum Mode {
+		HOME, MOUSE, KEYBOARD
+	};
+
+	private Mode mode;
 	private Socket socket;
 	MouseSimulatorUI mouseSimulatorUI;
 	KeyboardSimulatorUI keyboardSimulatorUI;
@@ -30,11 +44,43 @@ public class HomeActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		Constants.init();
-		setConnectedToServer(false);
+		// Editor editor =
+		// getSharedPreferences(Constants.SHARED_PREFERRENCE_NAME,
+		// Context.MODE_PRIVATE).edit();
+		// editor.remove("keyboard_zoom_level");
+		// editor.putFloat("keyboard_zoom_level", 0);
+		// editor.commit();
+		Constants.initKeyboardMap();
+		SettingsActivity.reloadConstantsValues(getSharedPreferences(
+				Constants.SHARED_PREFERRENCE_NAME, Context.MODE_PRIVATE));
 
-		prepareHome();
-		// startKeyboardSimulation();
+		setConnectedToServer(false);
+		mode = Mode.HOME;
+
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		try {
+			switch (mode) {
+			case KEYBOARD:
+				startKeyboardSimulation();
+				break;
+
+			case MOUSE:
+				startMouseSimulation();
+				break;
+
+			case HOME:
+			default:
+				prepareHome();
+				break;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			prepareHome();
+		}
 
 	}
 
@@ -101,8 +147,8 @@ public class HomeActivity extends Activity {
 						if (!isConnectedToServer())
 							return;
 						try {
-							// startMouseSimulation();
-							startKeyboardSimulation();
+							startMouseSimulation();
+							// startKeyboardSimulation();
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
@@ -113,6 +159,26 @@ public class HomeActivity extends Activity {
 
 			}
 		});
+		mode = Mode.HOME;
+	}
+
+	private void startMouseSimulation() throws IOException {
+		MouseSimulator mouseSimulator = new MouseSimulator(
+				socket.getOutputStream());
+		mouseSimulatorUI = new MouseSimulatorUI(HomeActivity.this,
+				mouseSimulator);
+
+		setContentView(mouseSimulatorUI);
+		mode = Mode.MOUSE;
+	}
+
+	private void startKeyboardSimulation() throws IOException {
+		KeyboardSimulator keyboardSimulator = new KeyboardSimulator(
+				socket.getOutputStream());
+		keyboardSimulatorUI = new KeyboardSimulatorUI(HomeActivity.this,
+				keyboardSimulator);
+		setContentView(keyboardSimulatorUI);
+		mode = Mode.KEYBOARD;
 	}
 
 	public void connectToServer() {
@@ -121,8 +187,10 @@ public class HomeActivity extends Activity {
 		int port = Integer.parseInt(((EditText) findViewById(R.id.server_port))
 				.getText().toString());
 		try {
+			Log.e("Home", "Connecting to " + ip + ":" + port);
 			socket = new Socket(InetAddress.getByName(ip), port);
 			setConnectedToServer(true);
+			Log.e("Home", "Connected ( " + ip + ":" + port + ")");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -140,26 +208,6 @@ public class HomeActivity extends Activity {
 			e.printStackTrace();
 		}
 
-	}
-
-	private void startMouseSimulation() throws IOException {
-		if (mouseSimulatorUI == null) {
-			MouseSimulator mouseSimulator = new MouseSimulator(
-					socket.getOutputStream());
-			mouseSimulatorUI = new MouseSimulatorUI(HomeActivity.this,
-					mouseSimulator);
-		}
-		setContentView(mouseSimulatorUI);
-	}
-
-	private void startKeyboardSimulation() throws IOException {
-		if (keyboardSimulatorUI == null) {
-			KeyboardSimulator keyboardSimulator = new KeyboardSimulator(
-					socket.getOutputStream());
-			keyboardSimulatorUI = new KeyboardSimulatorUI(HomeActivity.this,
-					keyboardSimulator);
-		}
-		setContentView(keyboardSimulatorUI);
 	}
 
 	public byte[] getByteArrayFromIP(String ip) {
@@ -206,6 +254,11 @@ public class HomeActivity extends Activity {
 			}
 			return true;
 
+		case R.id.menu_settings:
+			startActivity(new Intent(getApplicationContext(),
+					SettingsActivity.class));
+			return true;
+
 		case R.id.menu_exit:
 			onExit();
 			return true;
@@ -224,7 +277,8 @@ public class HomeActivity extends Activity {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			onExit();
+			// onExit();
+			exitApplication();
 			return true;
 		} else {
 			return super.onKeyDown(keyCode, event);

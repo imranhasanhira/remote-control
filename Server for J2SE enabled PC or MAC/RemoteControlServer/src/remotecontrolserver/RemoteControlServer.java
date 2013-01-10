@@ -311,12 +311,14 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
 
     @Override
     public void lineReceived(String line) {
-        String str = "";
-        byte[] bytes = line.getBytes();
-        for (byte b : bytes) {
-            str += "," + (int) b;
-        }
-        showStatus(str);
+//        String str = "";
+//        byte[] bytes = line.getBytes();
+//        for (byte b : bytes) {
+//            str += "," + (int) b;
+//        }
+//        showStatus(str);
+        
+        showStatus(line);
 
 
         if (line.startsWith("VM")) {
@@ -331,6 +333,7 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
                 Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
                 robot.mouseMove(mouseLocation.x + Integer.parseInt(values[0]), mouseLocation.y + Integer.parseInt(values[1]));
             }
+            
         } else if (line.startsWith("VK")) {
             String key = line.replace("VK", "").trim();
             int keyCode = Constants.virtualKeymap.get(key);

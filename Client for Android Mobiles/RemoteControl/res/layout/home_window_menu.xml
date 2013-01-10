@@ -17,6 +17,11 @@
         android:title="Keyboard"/>
     
     <item
+        android:id="@+id/menu_settings"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="Settings"/>
+    
+    <item
         android:id="@+id/menu_exit"
         android:icon="@android:drawable/btn_minus"
         android:title="Exit"/>

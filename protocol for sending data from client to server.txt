@@ -12,7 +12,9 @@ First 1Byte will be any of the following
 	|		|		next 1Byte represents which Mouse Button is Pressed down
 	|		|	3 - RELEASE
 	|		|		next 1Byte represents which Mouse Button is Released UP
-	|		|	4 - SCROLL_BY
+	|		|	4 - VERTICAL_SCROLL_BY
+	|		|		next 1byte represents how much amount to scroll.
+	|		|	5 - HORIZONTAL_SCROLL_BY
 	|		|		next 1byte represents how much amount to scroll.
 	|		|		
 	|		|		
