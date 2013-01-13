@@ -75,7 +75,7 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 			w = getWidth();
 			h = getHeight();
 
-			int buttonHeight = 60;
+			int buttonHeight = 70;
 			leftButtonArea = new Rect(5, h - buttonHeight, w / 2 - 5, h - 5);
 			rightButtonArea = new Rect(w / 2 + 5, h - buttonHeight, w - 5,
 					h - 5);
@@ -169,11 +169,11 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 			if (isInside(curX, curY, touchpadArea)) {
 				if (touchMode == TouchMode.CLICK) {
 					if (isInside(lastPressedX, lastPressedY, verticalScrollArea)) {
-						mouseScrollVerticalBy(diffY);
+						mouseScrollVerticalBy(diffY/3);
 						// pr("ScrollY " + diffY + "");
 					} else if (isInside(lastPressedX, lastPressedY,
 							horizontalScrollArea)) {
-						mouseScrollHorizontalBy(diffX);
+						mouseScrollHorizontalBy(diffX/3);
 						// pr("ScrollX " + diffX + "");
 					} else {
 						mouseMoveBy(diffX, diffY);
@@ -234,7 +234,7 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 	}
 
 	private void sendLeftPress() {
-		// Log.e("", "Left Press");
+		 Log.e("", "Left Press");
 		try {
 			mouseSimulator.simulatePress(Button.LEFT);
 		} catch (IOException e) {
@@ -243,7 +243,7 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 	}
 
 	private void sendLeftRelease() {
-		// Log.e("", "Left Release");
+		 Log.e("", "Left Release");
 		try {
 			mouseSimulator.simulateRelease(Button.LEFT);
 		} catch (IOException e) {
@@ -253,7 +253,7 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 	}
 
 	private void sendLeftClick() {
-		// Log.e("", "Left click");
+		 Log.e("", "Left click");
 		try {
 			mouseSimulator.simulateClick(MouseSimulator.Button.LEFT);
 		} catch (IOException e) {
@@ -271,7 +271,7 @@ public class MouseSimulatorUI extends View implements OnTouchListener {
 	}
 
 	private void mouseMoveBy(int dx, int dy) {
-		// Log.e("", "move " + i + ":" + j);
+		 Log.e("", "move " + dx + ":" + dy);
 		try {
 			mouseSimulator.simulateCursorMoveBy((short) dx, (short) dy);
 		} catch (IOException e) {

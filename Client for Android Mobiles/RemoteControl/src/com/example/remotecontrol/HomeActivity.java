@@ -44,12 +44,12 @@ public class HomeActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		// Editor editor =
-		// getSharedPreferences(Constants.SHARED_PREFERRENCE_NAME,
-		// Context.MODE_PRIVATE).edit();
-		// editor.remove("keyboard_zoom_level");
-		// editor.putFloat("keyboard_zoom_level", 0);
-		// editor.commit();
+		 Editor editor =
+		 getSharedPreferences(Constants.SHARED_PREFERRENCE_NAME,
+		 Context.MODE_PRIVATE).edit();
+		 editor.remove("keyboard_zoom_level");
+		 editor.putFloat("keyboard_zoom_level", 1);
+		 editor.commit();
 		Constants.initKeyboardMap();
 		SettingsActivity.reloadConstantsValues(getSharedPreferences(
 				Constants.SHARED_PREFERRENCE_NAME, Context.MODE_PRIVATE));
@@ -148,7 +148,7 @@ public class HomeActivity extends Activity {
 							return;
 						try {
 							startMouseSimulation();
-							// startKeyboardSimulation();
+//							 startKeyboardSimulation();
 						} catch (IOException e) {
 							e.printStackTrace();
 						}

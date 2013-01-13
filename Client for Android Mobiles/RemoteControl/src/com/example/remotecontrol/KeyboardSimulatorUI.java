@@ -6,16 +6,20 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.content.Context;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.BitmapFactory.Options;
 import android.graphics.Paint.Style;
 import android.graphics.Rect;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
@@ -54,15 +58,18 @@ public class KeyboardSimulatorUI extends LinearLayout implements
 			@Override
 			public void draw(Canvas canvas) {
 				super.draw(canvas);
-				Log.e("","zoomlevel: "+Constants.keyboardZoomLevel);
-				Log.e("", "res: " + getWidth() + ", " + getHeight());
+				Log.e("", "zoomlevel: " + Constants.keyboardZoomLevel);
+				Log.e("", "bitmap : " + Constants.keyBoardWidthPx + ", "
+						+ Constants.keyBoardHeightPx);
+				Log.e("", "IV: " + getWidth() + ", " + getHeight());
 
 				Paint p = new Paint();
 				p.setColor(Color.GREEN);
 				p.setStyle(Style.STROKE);
 				for (Integer i : Constants.keyboardMap.keySet()) {
-					Log.e("",
-							"" + ((char) i.intValue()) + ": " + Constants.keyboardMap.get(i));
+					if (i == 'A')
+						Log.e("", "A: " + ((char) i.intValue()) + ": "
+								+ Constants.keyboardMap.get(i));
 					canvas.drawRect(Constants.keyboardMap.get(i), p);
 				}
 
@@ -71,14 +78,6 @@ public class KeyboardSimulatorUI extends LinearLayout implements
 						new Rect(1, 1, getWidth() - 1, getHeight() - 1), p);
 			}
 		};
-		// iv.setLayoutParams(new LayoutParams(Constants.keyboardZoomLevel
-		// * Constants.keyBoardWidthPx, Constants.keyboardZoomLevel
-		// * Constants.keyBoardHeightPx));
-		iv.setLayoutParams(new LayoutParams(900, 288));
-		iv.setScaleType(ScaleType.FIT_XY);
-		iv.setImageResource(R.drawable.keyboard_long);
-
-		adjustKeyboardRotation();
 
 		ScrollView sv = new ScrollView(getContext());
 		sv.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
@@ -91,7 +90,23 @@ public class KeyboardSimulatorUI extends LinearLayout implements
 		sv.addView(hsv);
 		this.addView(sv);
 
+		Options options = new Options();
+		options.inJustDecodeBounds = true;
+		BitmapFactory.decodeResource(getResources(), R.drawable.keyboard_short,
+				options);
+		Constants.keyBoardWidthPx = options.outWidth;
+		Constants.keyBoardHeightPx = options.outHeight;
+
+		iv.setMaxHeight(100000);
+		iv.setMaxWidth(100000);
+		ViewGroup.LayoutParams layoutParams = iv.getLayoutParams();
+		layoutParams.width = (int) (Constants.keyBoardWidthPx * Constants.keyboardZoomLevel);
+		layoutParams.height = (int) (Constants.keyBoardHeightPx * Constants.keyboardZoomLevel);
+		iv.setLayoutParams(layoutParams);
+		iv.setScaleType(ScaleType.FIT_XY);
+		iv.setImageResource(R.drawable.keyboard_short);
 		iv.setOnTouchListener(this);
+		adjustKeyboardRotation();
 	}
 
 	@Override
@@ -104,7 +119,6 @@ public class KeyboardSimulatorUI extends LinearLayout implements
 			curX ^= curY ^= curX ^= curY;
 		}
 
-		long curTime = System.currentTimeMillis();
 		switch (event.getAction()) {
 		case MotionEvent.ACTION_DOWN:
 			if (Constants.repeatingKeyEnabled) {

@@ -11,6 +11,7 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +29,6 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
     private AdvancedThread servingThread;
     private ServerSocket serverSocket;
     private ArrayList<ClientManager> clientManagers;
-    private Robot robot;
 
     /**
      * Creates new form RemoteControlServer
@@ -44,14 +44,7 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
         }
 
         printCurrentIPs();
-        try {
-//            robot = new Robot(GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice());
-            robot = new Robot();
-        } catch (AWTException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Your Device doesn't support Robot. Robot is required to simulate Mouse & Keyboard. The program will now exit.");
-            System.exit(0);
-        }
+
 
 
     }
@@ -104,7 +97,7 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
                         .addComponent(portNUmberTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 96, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(59, 59, 59)
                         .addComponent(actionButton)
-                        .addGap(0, 17, Short.MAX_VALUE))
+                        .addGap(0, 158, Short.MAX_VALUE))
                     .addComponent(jScrollPane1))
                 .addContainerGap())
         );
@@ -116,7 +109,7 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
                     .addComponent(jLabel2)
                     .addComponent(actionButton))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 235, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 484, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -218,7 +211,7 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
             protected void preTask() {
                 try {
                     serverSocket = new ServerSocket(portNumber);
-                    showStatus("socket running at " + serverSocket.getInetAddress() + " with port " + serverSocket.getLocalPort());
+                    showStatus("socket running at " + serverSocket.getInetAddress().getHostAddress() + " with port " + serverSocket.getLocalPort());
 
                 } catch (IOException ex) {
                     showException(ex);
@@ -228,7 +221,7 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
             @Override
             protected void loopTask() throws Exception {
                 Socket clientSocket = serverSocket.accept();
-                showStatus("One client connected ");
+                showStatus(new Date(System.currentTimeMillis()) + " : client connected " + clientSocket.getLocalAddress().getHostName());
                 ClientManager clientManager = new ClientManager(clientSocket, RemoteControlServer.this);
                 clientManagers.add(clientManager);
             }
@@ -317,29 +310,8 @@ public class RemoteControlServer extends javax.swing.JFrame implements NetworkIn
 //            str += "," + (int) b;
 //        }
 //        showStatus(str);
-        
+
         showStatus(line);
-
-
-        if (line.startsWith("VM")) {
-            if (line.contains("LEFT")) {
-                robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-                robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-            } else if (line.contains("RIGHT")) {
-                robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
-                robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-            } else if (line.contains("MOVE")) {
-                String[] values = line.replace("VM MOVE_BY", "").trim().split(" ");
-                Point mouseLocation = MouseInfo.getPointerInfo().getLocation();
-                robot.mouseMove(mouseLocation.x + Integer.parseInt(values[0]), mouseLocation.y + Integer.parseInt(values[1]));
-            }
-            
-        } else if (line.startsWith("VK")) {
-            String key = line.replace("VK", "").trim();
-            int keyCode = Constants.virtualKeymap.get(key);
-            robot.keyPress(keyCode);
-            robot.keyRelease(keyCode);
-        }
 
     }
 }
